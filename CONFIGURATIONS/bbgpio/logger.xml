@@ -1,0 +1,10 @@
+<?xml version="1.0" ?><set type="pathnames">
+	<attribute category="generic" name="log_theme" value="from/$MQTT_DOMAIN/$MQTT_SUBDOMAIN/$MQTT_SERVICE/logger"/>
+	<attribute category="generic" name="status_theme" value="from/$MQTT_DOMAIN/$MQTT_SUBDOMAIN/$MQTT_SERVICE/$LOCALNAME"/>
+	<attribute category="generic" name="notify_theme" value="from/any"/>
+	<attribute category="generic" name="describe_theme" value="from/$MQTT_DOMAIN/$MQTT_SUBDOMAIN/$MQTT_SERVICE/description"/>
+	<attribute category="generic" name="log_msg" value="{$LOCALNAME:$MESSAGE}"/>
+	<attribute category="generic" name="status_msg" value="{status:$MESSAGE}"/>
+	<attribute category="generic" name="notify_msg" value="{$INFOTYPE:$MESSAGE}"/>
+	<attribute category="generic" name="describe_msg" value=" $MESSAGE "/>
+</set>
