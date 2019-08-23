@@ -1,0 +1,15 @@
+<?xml version="1.0" ?>
+<set type="control">
+<attribute name="cmd" category="trigger" value="$CMD"/>
+<attribute name="event" category="trigger" value="$TRIGGER"/>
+<attribute name="$TUP" category="input" value="1" />
+<attribute name="$TDOWN" category="input" value="1" />
+<attribute name="$TUP" category="remap" value="UP" />
+<attribute name="$TDOWN" category="remap" value="DOWN" />
+<attribute name="OFF+OFF" category="UP" value="ON+OFF"/>
+<attribute name="ON+OFF" category="UP" value="OFF+OFF"/>
+<attribute name="OFF+ON" category="UP" value="ON+OFF"/>
+<attribute name="OFF+OFF" category="DOWN" value="OFF+ON"/>
+<attribute name="OFF+ON" category="DOWN" value="OFF+OFF"/>
+<attribute name="ON+OFF" category="DOWN" value="OFF+ON"/>
+</set>

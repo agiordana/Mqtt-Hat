@@ -1,0 +1,11 @@
+<?xml version="1.0" ?>
+<set type="$NAME">
+<attribute name="name" category="generic" value="$NAME"/>
+<attribute name="active" category="generic" value="ON"/>
+<attribute name="type" category="generic" value="$TYPE"/>
+<attribute name="event" category="generic" value="from/$MQTT_DOMAIN/$MQTT_SUBDOMAIN/$MQTT_SERVICE/$NAME"/>
+<attribute name="cmd" category="trigger" value="$CMD"/>
+<attribute name="cmd" category="generic" value="$TARGET"/>
+<attribute name="ON" category="cmd" value="1"/>
+<attribute name="OFF" category="cmd" value="0"/>
+</set>

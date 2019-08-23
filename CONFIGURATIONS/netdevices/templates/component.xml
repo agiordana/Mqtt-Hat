@@ -1,0 +1,12 @@
+<?xml version="1.0" ?>
+<set type="$NAME">
+<attribute name="name" category="generic" value="$NAME"/>
+<attribute name="eventname" category="generic" value="$NAME"/>
+<attribute name="event" category="trigger" value="$EVENT"/>
+<attribute name="status" category="generic" value="OFF"/>
+<attribute name="active" category="generic" value="ON"/>
+<attribute name="order" category="generic" value="$ORDER"/>
+<attribute name="cmd" category="generic" value="$CMD"/>
+<attribute name="ON" category="cmd" value="1"/>
+<attribute name="OFF" category="cmd" value="0"/>
+</set>
