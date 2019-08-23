@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<set type="out6">
+<attribute name="type" value="booleanout"/>
+<attribute name="capename" value="OUT6"/>
+<attribute name="gpioname" value="gpio66"/>
+<attribute name="gpiopath" value="/sys/class/gpio/gpio66"/>
+<attribute name="event" value="from/$MQTT_DOMAIN/$MQTT_SUBDOMAIN/gpio/OUT6"/>
+<attribute category="script" name="cmd2" value="echo out > /sys/class/gpio/gpio66/direction"/>
+</set>
