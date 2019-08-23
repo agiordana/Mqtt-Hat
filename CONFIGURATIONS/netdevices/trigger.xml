@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<set type="trigger">
+        <attribute category="trigger" name="sync" value="300"/>
+</set>

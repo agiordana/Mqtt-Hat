@@ -1,0 +1,12 @@
+<?xml version="1.0" ?><set type="pathnames">
+<attribute category="generic" name="agenttype" value="netdevices"/>
+<attribute category="generic" name="agentname" value="netdevices_$HOST"/>
+<attribute category="generic" name="homedir" value="/home/debian/hat_home/netdevices"/>
+<attribute category="generic" name="emergency_homedir" value="/home/debian/hat_home/netdevices"/>
+<attribute category="generic" name="description" value="Local Netdevices"/>
+<attribute category="generic" name="port" value="8092"/>
+<attribute category="generic" name="threads" value="threads"/>
+<attribute category="generic" name="mqtt_domain" value=""/>
+<attribute category="generic" name="mqtt_subdomain" value=""/>
+<attribute category="generic" name="mqtt_service" value="dev"/>
+</set>
