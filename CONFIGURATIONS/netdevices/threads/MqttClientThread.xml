@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<set type="thread">
+<attribute category="generic" name="status" value="ON"/>
+<attribute category="generic" name="host" value="localhost"/>
+<attribute category="generic" name="port" value="1883"/>
+<attribute category="topic" name='from/$MQTT_DOMAIN/+/gpio/#' value="mqtt_sub"/>
+<attribute category="topic" name="to/$MQTT_DOMAIN/$MQTT_SUBDOMAIN/$MQTT_SERVICE/#" value="mqtt_sub"/>
+<attribute category="topic" name="to/$MQTT_DOMAIN/all/$MQTT_SERVICE/all" value="mqtt_sub"/>
+<attribute category="topic" name="to/all" value="mqtt_sub"/>
+</set>
