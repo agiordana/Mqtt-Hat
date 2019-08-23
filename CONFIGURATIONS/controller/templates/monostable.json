@@ -1,0 +1,16 @@
+{"rule":"name",
+ "type":"MONOSTABLE",
+ "from":"$FROM",
+ "to":"$TO",
+ "enabling_true_conditions":"$TRUECONDITIONS",
+ "enabling_false_conditions":"$FALSECONDITIONS",
+ "clause":"$EVENTS",
+ "min_conditions":"$MINEV",
+ "duration":"$DURATION",
+ "event_duration":"$EVENTDURATION",
+ "action_target":"$TARGET",
+ "action_on":"$ACTIONON",
+ "action_off":"$ACTIONOFF",
+ "status":"ON"
+}
+

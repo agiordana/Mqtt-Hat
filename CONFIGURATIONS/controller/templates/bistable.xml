@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<set>
+	<attribute name="rule_type" value="BISTABLE"/>
+	<attribute name="enabling_true_condition" value="$TRUECONDITIONS"/>
+	<attribute name="enabling_false_condition" value="$FALSECONDITIONS"/>
+	<attribute name="repeat_every" value="$REPEATEVERY"/>
+	<attribute name="from" value="$FROM"/>
+	<attribute name="to" value="$TO"/>
+	<attribute name="action_target" value="$TARGET"/>
+	<attribute name="action_on" value="$ACTIONON"/>
+	<attribute name="action_active" value="$ACTIONACTIVE"/>
+	<attribute name="action_off" value="$ACTIONOFF"/>
+	<attribute name="status" value="ON"/>
+	$ALIAS
+</set>

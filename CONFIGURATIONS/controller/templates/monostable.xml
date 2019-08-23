@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<set>
+	<attribute name="rule_type" value="MONOSTABLE"/>
+	<attribute name="duration" value="$DURATION"/>
+	<attribute name="clause" value="$EVENTS"/>
+	<attribute name="event_duration" value="$EVENTDURATION"/>
+	<attribute name="min_conditions" value="$MINEV"/>
+	<attribute name="enabling_true_condition" value="$TRUECONDITIONS"/>
+	<attribute name="enabling_false_condition" value="$FALSECONDITIONS"/>
+	<attribute name="from" value="$FROM"/>
+	<attribute name="to" value="$TO"/>
+	<attribute name="action_target" value="$TARGET"/>
+	<attribute name="action_on" value="$ACTIONON"/>
+	<attribute name="action_off" value="$ACTIONOFF"/>
+	$ALIAS
+	<attribute name="status" value="ON"/>
+</set>

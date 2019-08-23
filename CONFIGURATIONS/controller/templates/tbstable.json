@@ -1,0 +1,22 @@
+{"name":"RRRR",
+ "type":"BISTABLE",
+ "from":"09:00:00",
+ "to":"14:15:00",
+ "enabling_true_conditions": [
+     {"name":"test/hatmaster/gpio/IN3","alias":"ppp1"},
+     {"name":"test/hatmaster/gpio/IN4","alias":"ppp2"}
+    ],
+ "enabling_false_conditions": [
+     {"name":"test/hatmaster/gpio/IN5","alias":"nnn1"},
+     {"name":"test/hatmaster/gpio/IN6","alias":"nnn2"}
+    ],
+ "repeat_every":"100",
+ "action_target": [
+     {"name":"test/hatmaster/gpio/OUT4","alias":"aaa1"}
+    ],
+ "action_on":"1",
+ "action_active":"1",
+ "action_off":"0",
+ "status":"ON"
+}
+

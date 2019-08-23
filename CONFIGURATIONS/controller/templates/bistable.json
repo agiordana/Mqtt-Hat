@@ -1,0 +1,14 @@
+{"rule":"name",
+ "type":"BISTABLE",
+ "from":"$FROM",
+ "to":"$TO",
+ "enabling_true_conditions":"$TRUECONDITIONS",
+ "enabling_false_conditions":"$FALSECONDITIONS",
+ "repeat_every","$REPEATEVERY",
+ "action_target":"$TARGET",
+ "action_on":"$ACTIONON",
+ "action_active":"$ACTIONACTIVE",
+ "action_off":"$ACTIONOFF",
+ "status":"ON"
+}
+
