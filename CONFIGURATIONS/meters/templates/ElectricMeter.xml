@@ -1,0 +1,11 @@
+<?xml version="1.0" ?>
+<set type="SolarPanel">
+<attribute name="name" value="$NAME"/>
+<attribute name="type" value="ElectricMeter"/>
+<attribute name="alpha" value="0.8"/>
+<attribute name="input" value="$INPUT"/>
+<attribute name="event" value="from/$MQTT_DOMAIN/$MQTT_SUBDOMAIN/$MQTT_SERVICE/$NAME"/>
+<attribute name="unit" value="Wh"/>
+<attribute name="quantum" value="1"/>
+<attribute name="status" value="ON"/>
+</set>

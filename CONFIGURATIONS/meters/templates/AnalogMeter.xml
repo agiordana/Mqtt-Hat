@@ -1,0 +1,11 @@
+<?xml version="1.0" ?>
+<set type="analog">
+<attribute name="name" value="$NAME"/>
+<attribute name="type" value="AnalogMeter"/>
+<attribute name="input" value="$INPUT"/>
+<attribute name="event" value="from/$MQTT_DOMAIN/$MQTT_SUBDOMAIN/$MQTT_SERVICE/$NAME"/>
+<attribute name="unit" value="$UNIT"/>
+<attribute name="scale_factor" value="$SCALE_FACTOR"/>
+<attribute name="probe" value="$PROBE"/>
+<attribute name="status" value="ON"/>
+</set>
