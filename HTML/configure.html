@@ -1,0 +1,1795 @@
+<html5>
+<head>
+       <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>HAT Interface</title>
+       <link rel="stylesheet" type="text/css" href="/css/bootstrap.css">
+        <link rel="stylesheet" type="text/css" href="/css/bootstrap-theme.css">
+        <link rel="stylesheet" type="text/css" href="/css/style.css">
+        <link rel="stylesheet" type="text/css" href="/css/mqtthat.css">
+       <script type="text/javascript" src="/js/html5shiv.js"></script>
+        <script type="text/javascript" src="/js/respond.min.js"></script>
+        <![endif]-->
+        <script type="text/javascript" src="/js/jquery-1.11.0.min.js"></script>
+        <script type="text/javascript" src="/js/jquery-ui-1.10.4.min.js"></script>
+        <script type="text/javascript" src="/js/bootstrap.js"></script>
+        <script type="text/javascript" src="/js/fullscreen.js"></script>
+        <script type="text/javascript" src="/js/jquery-cookie.js" charset="utf-8" ></script>
+        <script src="/js/jquery-lang.js" charset="utf-8" type="text/javascript"></script>
+        <script src="/js/utility.js" charset="utf-8" type="text/javascript"></script>
+
+
+ 	<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.js" type="text/javascript"></script>
+	<script type="text/javascript" src="/js/mqtthat.js"></script>
+<script>
+
+var domains = Array();
+
+function HatInput(dp,root, desc) {
+   this.statusUpdate = function(val) {
+      if(val == this.value) return true;
+      this.value = val;
+      document.getElementById(this.measureid).innerHTML = this.value;
+      return true;
+   }
+   this.enablepr = function(dom,subdom,srv,md) {
+      if(md == true) {
+         this.prbtn.setAttribute("onclick", 'propagate("'+this.uri+'","'+dom+'","'+subdom+'","'+srv+'","IN")');
+         this.prbtn.style.visibility = "visible";
+         this.prbtn.disabled = false;
+      }
+      else {
+         this.prbtn.style.visibility = "hidden";
+         this.prbtn.disabled = true;
+      }
+      return true;
+   }
+   
+   this.name = desc.name;
+   this.anc = dp[0]+"_"+dp[1]+"_"+dp[2];
+   this.node = document.createElement("div");
+   this.node.id = "H_"+this.anc+"_"+desc.name;
+   this.node.setAttribute("class","holder");
+   this.uri = dp[0]+"/"+dp[1]+"/"+dp[2]+"/"+this.name;
+   this.prbtn = document.createElement("button");
+   this.prbtn.id="PRBTN_"+this.node.id;
+   this.prbtn.className = "editpr";
+   this.node.appendChild(this.prbtn);
+   this.prbtn.style.visibility = "hidden";
+   this.meter = document.createElement("div");
+   this.meter.className="meter";
+   this.measureid = this.anc+"_"+desc.name;
+   if(desc.value == undefined) this.value = 0;
+   else this.value = desc.value;
+   this.meter.innerHTML= desc.name +' <div id="'+this.measureid+'" class="measure">'+this.value+'</div>';
+   root.appendChild(this.node);
+   this.node.appendChild(this.meter);
+}
+
+function HatButton(dp,root, desc) {
+   this.statusUpdate = function(val) {
+      if(val == this.value) return true;
+      this.value = val;
+      var imguri;
+      if(this.value == 0) imguri = "/img/Button-Blank-Green-icon.png";
+      else imguri = "/img/Button-Blank-Red-icon.png";
+      document.getElementById(this.imgid).src = imguri;
+      return true;
+   }
+   this.doClick = function() {
+	var cmd;
+	if(this.value==0) cmd = "{cmd:1}";
+	else cmd = "{cmd:0}";
+	message = new Paho.MQTT.Message(cmd);
+	message.destinationName = this.cmdtopic;
+	client.send(message);
+   }
+   this.enablepr = function(dom,subdom,srv,md) {
+      if(md == true) {
+         this.prbtn.setAttribute("onclick", 'propagate("'+this.uri+'","'+dom+'","'+subdom+'","'+srv+'","OUT")');
+         this.prbtn.style.visibility = "visible";
+	 this.prbtn.disabled = false;
+      } else {
+         this.prbtn.style.visibility = "hidden";
+	 this.prbtn.disabled = true;
+      }
+      return true;
+   }
+
+   this.name = desc.name;
+   this.anc = dp[0]+"_"+dp[1]+"_"+dp[2];
+   this.node = document.createElement("div");
+   this.node.id = "H_"+this.anc+"_"+desc.name;
+   this.node.className = "bholder";
+   this.prbtn = document.createElement("button");
+   this.prbtn.id="PRBTN_"+this.node.id;
+   this.prbtn.className = "editpr";
+   this.node.appendChild(this.prbtn);
+   this.prbtn.style.visibility = "hidden";
+   this.btn = document.createElement("button");
+   this.btn.id = this.anc+"_"+this.name;
+   this.imgid = "I_"+this.anc+"_"+this.name;
+   this.uri = dp[0]+"/"+dp[1]+"/"+dp[2]+"/"+this.name;
+   this.cmdtopic = "to/"+this.uri;
+   this.btn.className = "switch";
+   this.clickcall = 'doClickCall("'+dp[0]+'","'+dp[1]+'","'+dp[2]+'","'+this.name+'")';
+   this.btn.setAttribute("onclick", this.clickcall);
+   root.appendChild(this.node);
+   this.node.appendChild(this.btn);
+   this.value = desc.value;
+   if(this.value == 0) this.btn.innerHTML = '<img id="'+this.imgid+'" src="/img/Button-Blank-Green-icon.png" class=button>' + this.name;
+   else this.btn.innerHTML = '<img id="'+this.imgid+'" src="/img/Button-Blank-Red-icon.png" class=button>' + this.name;
+}
+
+function doChooseUpdate(domain,subdomain,service,src) {
+	domains[domain].subdomains[subdomain].services[service].deveditor.doChooseUpdate(src);
+}
+
+function changeColorN(id,color) {
+	document.getElementById(id).style.backgroundColor = color;
+}
+
+function changeColor(id,color) {
+	if(document.getElementById(id).style.backgroundColor == color)
+	    document.getElementById(id).style.backgroundColor = "";
+	else document.getElementById(id).style.backgroundColor = color;
+}
+
+function doClickCall(domain,subdomain,service,device) {
+	domains[domain].subdomains[subdomain].services[service].items[device].doClick();
+}
+
+function doClickEndCall(domain,subdomain,service,device) {
+	domains[domain].subdomains[subdomain].services[service].items[device].doClickEnd();
+}
+
+function doClickCallC(domain,subdomain,service,device, component) {
+	domains[domain].subdomains[subdomain].services[service].items[device].doClickC(component);
+}
+
+function propagate(uri,dom,subdom,srv,inout) {
+	domains[dom].subdomains[subdom].services[srv].deveditor.addlink(uri, inout);
+}
+
+function doCreate(dom,subdom,srv) {
+	if(!domains[dom].subdomains[subdom].services[srv].deveditor.create()) return;
+	domains[dom].subdomains[subdom].services[srv].editorReset();
+	domains[dom].enablepr(dom,subdom,srv, false);
+        var request = '{request:description.json}';
+        var message = new Paho.MQTT.Message(request);
+        message.destinationName = "to/"+dom+"/"+subdom+"/"+srv+"/all";
+        client.send(message);
+}
+
+function doClear(domain,subdomain,service) {
+	domains[domain].subdomains[subdomain].services[service].destroy();
+        var request = '{request:description.json}';
+        var message = new Paho.MQTT.Message(request);
+        message.destinationName = "to/"+domain+"/"+subdomain+"/"+service+"/all";
+        client.send(message);
+}
+
+function clearEnable(domain,subdomain,service,mode) {
+	domains[domain].subdomains[subdomain].services[service].enableclr(mode);
+}
+
+
+function doEdit(domain,subdomain,service) {
+	domains[domain].subdomains[subdomain].services[service].addDevice();
+	domains[domain].enablepr(domain,subdomain,service, true);
+}
+
+function HatSubdomain(dp, desc) {
+  this.update = function(dp, desc) {
+    var srv = dp[2];
+    if(this.services[srv] == undefined) {
+       if(srv == "gpio") this.services[srv] = new HatGpioService(dp, desc);
+       else if(srv=="dev") this.services[srv] = new HatDevService(dp, desc);
+       else if(srv=="ruler") this.services[srv] = new HatRulerService(dp, desc);
+       else if(srv=="meter") this.services[srv] = new HatMeterService(dp, desc);
+    }
+    else this.services[srv].update(dp, desc);
+  }
+  this.statusUpdate = function(path,value) {
+     var serv = path.shift();
+     if(this.services[serv]== undefined) return false;
+     else return this.services[serv].statusUpdate(path, value);
+  }
+  this.enablepr = function(dom,subdom,srv,md) {
+     if(this.services["gpio"]!= undefined) this.services["gpio"].enablepr(dom,subdom,srv,md);
+     return true;
+   }
+  this.name = dp[1];
+  this.anc = dp[0];
+  this.services = Array();
+  this.node = document.createElement("div");
+  this.node.id = this.anc+"_"+this.name;
+  this.node.className = "header";
+  this.node.innerHTML = "<b> Node: "+this.name+"</b><br>";
+  document.getElementById(this.anc).appendChild(this.node);
+  this.update(dp, desc);
+}
+
+
+function conditionLink(path, root, uri, dp) {
+    this.describe = function() {
+	   this.desc = '{"name":"'+this.uri+'","alias":"'+this.inputName.value+'"}';
+	   return this.desc;
+   }
+   this.update = function() {
+	   console.log("AAAAA");
+   }
+   this.getType = function() {
+      return document.getElementById(this.condType.id).value;
+   }
+   this.desc = "";
+   this.uri = uri;
+   this.nl = uri.split("/");
+   this.name = this.nl.pop();
+   this.node = document.createElement("div");
+   this.node.id = path+"_"+this.name;
+   this.condType = document.createElement("select");
+   this.condType.id = this.anc + "_" + this.name + "_TYPE";
+   this.selectCall = 'doChooseUpdate("'+dp[0]+'","'+dp[1]+'","'+dp[2]+'","condlink")';
+   this.condType.setAttribute("onchange",this.selectCall);
+   this.opt1 = document.createElement("option");
+   this.opt1.setAttribute("value","PC");
+   this.opt1t = document.createTextNode("PC");
+   this.opt1.appendChild(this.opt1t);
+   this.condType.appendChild(this.opt1);
+   this.opt2 = document.createElement("option");
+   this.opt2.setAttribute("value","NC");
+   this.opt2t = document.createTextNode("NC");
+   this.opt2.appendChild(this.opt2t);
+   this.condType.appendChild(this.opt2);
+   this.opt3 = document.createElement("option");
+   this.opt3.setAttribute("value","TR");
+   this.opt3t = document.createTextNode("TR");
+   this.opt3.appendChild(this.opt3t);
+   this.condType.appendChild(this.opt3);
+
+   this.inputName = document.createElement("input");
+   this.inputName.setAttribute("type","text");
+   this.inputName.setAttribute("value",this.name);
+   this.inputName.setAttribute("class","name");
+   this.node.className = "iolink";
+   this.node.innerHTML="<b>"+uri+"</b>";
+   this.node.appendChild(this.inputName);
+   this.node.appendChild(this.condType);
+   root.appendChild(this.node);
+}
+
+
+function changeDemo() {
+	console.log("OPTION:changed");
+}
+
+function ioLink(path, root, uri) {
+    this.describe = function() {
+	   this.desc = '{"name":"'+this.uri+'","alias":"'+this.inputName.value+'"}';
+	   return this.desc;
+   }
+   this.desc = "";
+   this.uri = uri;
+   this.nl = uri.split("/");
+   this.name = this.nl.pop();
+   this.node = document.createElement("div");
+   this.node.id = path+"_"+this.name;
+   this.inputName = document.createElement("input");
+   this.inputName.setAttribute("type","text");
+   this.inputName.setAttribute("value",this.name);
+   this.inputName.setAttribute("class","name");
+   this.node.className = "iolink";
+   this.node.innerHTML="<b>"+uri+"</b>";
+   this.node.appendChild(this.inputName);
+   root.appendChild(this.node);
+}
+
+function HatRuleEditor(dp, root) {
+   this.addlink = function(uri, inout) {
+	   if(inout=="IN" && !this.isin(this.condition, uri))
+		   this.condition.push(new conditionLink(this.node.id, this.conditionfr, uri, this.ndp));
+	   else if(inout=="OUT"&&!this.isin(this.target, uri))
+		   this.target.push(new ioLink(this.node.id, this.targetfr, uri));
+	   return true;
+   }
+   this.isin = function(outlist, uri) {
+	   for(this.i=0; this.i<outlist.length; this.i++) {
+		   if(outlist[this.i].uri == uri) return true;
+	   }
+	   return false;
+   }
+   this.create = function() {
+           for(this.i=0; this.i<this.condition.length; this.i++)
+		if(this.condition[this.i].getType() == "PC") this.true_condition.push(this.i);
+		else if(this.condition[this.i].getType() == "NC") this.false_condition.push(this.i);
+		else this.trigger_condition.push(this.i);
+	   this.desc += '{\n\r  "name":"'+this.ruleName.value+'",\n\r';
+	   this.desc += '  "type":"'+this.ruleType.value+'",\n\r';
+	   this.desc += '  "from":"'+this.from.value+'",\n\r';
+	   this.desc += '  "to":"'+this.to.value+'",\n\r';
+	   this.desc += '  "enabling_true_conditions": [\n\r';
+	   for(this.i=0; this.i<this.true_condition.length; this.i++) {
+		if(this.i == 0) this.desc += '    ';
+		else this.desc += ',\n\r    ';
+		this.desc += this.condition[this.true_condition[this.i]].describe();
+	   }
+	   this.desc += '\n\r    ],\n\r  "enabling_false_conditions": [\n\r';
+	   for(this.i=0; this.i<this.false_condition.length; this.i++) {
+		if(this.i == 0) this.desc += '    ';
+		else this.desc += ',\n\r    ';
+		this.desc += this.condition[this.false_condition[this.i]].describe();
+	   }
+	   this.desc += '\n\r    ],\n\r';
+	   if(this.getType()=="MONOSTABLE") {
+	      this.desc += '  "clause": [\n\r';
+	      for(this.i=0; this.i<this.trigger_condition.length; this.i++) {
+	  	   if(this.i == 0) this.desc += '    ';
+		   else this.desc += ',\n\r    ';
+		   this.desc += this.condition[this.trigger_condition[this.i]].describe();
+	      }
+	      this.desc += '\n\r    ],\n\r';
+	   }
+	   this.desc +=  '  "action_target": [\n\r';
+	   for(this.i=0; this.i<this.target.length; this.i++) {
+		if(this.i == 0) this.desc += '    ';
+		else this.desc += ',\n\r    ';
+		this.desc += this.target[this.i].describe();
+	   }
+	   this.desc += '\n\r    ],\n\r';
+	   if(this.getType() == "BISTABLE") this.desc += '  "repeat_every":"'+this.cycle.value+'",\n\r';
+           else {
+	       this.desc += '  "min_conditions":"'+this.noftrigger.value+'",\n\r';
+	       this.desc += '  "event_duration":"'+this.persistence.value+'",\n\r';
+	       this.desc += '  "duration":"'+this.duration.value+'",\n\r';
+	   }
+	   this.desc += '  "action_on":"'+this.commandon.value+'",\n\r';
+	   if(this.getType() == "BISTABLE") this.desc += '  "action_active":"'+this.commandon.value+'",\n\r';
+	   this.desc += '  "action_off":"'+this.commandoff.value+'"\n\r';
+	   this.desc += '}';
+	   this.message = new Paho.MQTT.Message(this.desc);
+	   this.message.destinationName = this.theme+"/newrule";
+	   client.send(this.message);
+	   return true;
+   }
+   this.destroy = function() {
+      this.r.removeChild(this.node);	
+   }
+   this.doChooseUpdate = function(source) {
+      if(source === "seltype") {
+         if(this.getType() === "MONOSTABLE") this.setMonostable();
+         else this.setBistable();
+      }
+      for(this.i = 0; this.i < this.condition.length; this.i++) {
+          if(this.getType()=="BISTABLE" && this.condition[this.i].getType()=="TR") changeColorN(this.condition[this.i].node.id,"gray"); 
+	  else changeColorN(this.condition[this.i].node.id,"");
+      }
+   }
+   this.getType  = function() {
+      return document.getElementById(this.ruleType.id).value;
+   }
+   this.setBistable = function() {
+	   document.getElementById(this.duration.id).style.visibility = "hidden";
+	   document.getElementById(this.persistence.id).style.visibility = "hidden";
+	   document.getElementById(this.noftrigger.id).style.visibility = "hidden";
+	   document.getElementById(this.cycle.id).style.visibility = "visible";
+   }
+   this.setMonostable = function() {
+	   document.getElementById(this.duration.id).style.visibility = "visible";
+	   document.getElementById(this.persistence.id).style.visibility = "visible";
+	   document.getElementById(this.noftrigger.id).style.visibility = "visible";
+	   document.getElementById(this.cycle.id).style.visibility = "hidden";
+   }
+   this.ndp = dp;
+   this.r = root;
+   this.i = 0;
+   this.desc = "";
+   this.theme = "to/"+dp[0]+"/"+dp[1]+"/"+dp[2];
+   this.name = "NewRule";
+   this.anc = dp[0]+"_"+dp[1]+"_"+dp[2];
+   this.node = document.createElement("div");
+   this.node.id = this.anc+"_"+this.name;
+   this.node.className = "deveditor";
+   this.node.innerHTML = "<b>"+this.name+"</b><br>";
+   this.btn = document.createElement("button");
+   this.btn.id = this.anc + "_" +this.name+"_CREATE";
+   this.btn.setAttribute("class", "edit");
+   this.btn.innerHTML = "Create";
+   this.clickcall = 'doCreate("'+dp[0]+'","'+dp[1]+'","'+dp[2]+'")';
+   this.btn.setAttribute("onclick",this.clickcall);
+   this.node.appendChild(this.btn);
+   this.selectCall = 'doChooseUpdate("'+dp[0]+'","'+dp[1]+'","'+dp[2]+'","seltype")';
+   this.ruleType = document.createElement("select");
+   this.ruleType.id = this.anc + "_" + this.name + "_TYPE";
+   this.ruleType.setAttribute("onchange",this.selectCall);
+   this.opt1 = document.createElement("option");
+   this.opt1.setAttribute("value","MONOSTABLE");
+   this.opt1t = document.createTextNode("MONOSTABLE");
+   this.opt1.appendChild(this.opt1t);
+   this.ruleType.appendChild(this.opt1);
+   this.opt2 = document.createElement("option");
+   this.opt2.setAttribute("value","BISTABLE");
+   this.opt2t = document.createTextNode("BISTABLE");
+   this.tp = document.createTextNode(" Type: ");
+   this.node.appendChild(this.tp);
+   this.opt2.appendChild(this.opt2t);
+   this.ruleType.appendChild(this.opt2);
+   this.node.appendChild(this.ruleType);
+   this.ruleName = document.createElement("input");
+   this.ruleName.setAttribute("type","text");
+   this.ruleName.setAttribute("value",this.name);
+   this.ruleName.id = this.node.id+"ruleName";
+   this.ruleName.setAttribute("class","name");
+   this.nm = document.createTextNode("  Name: ");
+   this.node.appendChild(this.nm);
+   this.node.appendChild(this.ruleName);
+   this.dur = document.createTextNode("  Duration: ");
+   this.node.appendChild(this.dur);
+   this.duration = document.createElement("input");
+   this.duration.setAttribute("type","text");
+   this.duration.setAttribute("value",300);
+   this.duration.id = this.node.id+"duration";
+   this.duration.setAttribute("class","shortfield");
+   this.node.appendChild(this.duration);
+
+   this.cy = document.createTextNode(" Cycle: ");
+   this.node.appendChild(this.cy);
+   this.cycle = document.createElement("input");
+   this.cycle.setAttribute("type","text");
+   this.cycle.setAttribute("value",300);
+   this.cycle.id = this.node.id+"cycle";
+   this.cycle.setAttribute("class","shortfield");
+   this.node.appendChild(this.cycle);
+
+   this.cmdon = document.createTextNode("  Cmd (On Start): ");
+   this.node.appendChild(this.cmdon);
+   this.commandon = document.createElement("input");
+   this.commandon.setAttribute("type","text");
+   this.commandon.setAttribute("value", 1);
+   this.commandon.id = this.node.id+"commandon";
+   this.commandon.setAttribute("class","shortfield");
+   this.node.appendChild(this.commandon);
+
+   this.cmdoff = document.createTextNode("  Cmd (On End): ");
+   this.node.appendChild(this.cmdoff);
+   this.commandoff = document.createElement("input");
+   this.commandoff.setAttribute("type","text");
+   this.commandoff.setAttribute("value", 0);
+   this.commandoff.id = this.node.id+"commandoff";
+   this.commandoff.setAttribute("class","shortfield");
+   this.node.appendChild(this.commandoff);
+
+   this.from = document.createTextNode("  Active from: ");
+   this.node.appendChild(this.from);
+   this.from = document.createElement("input");
+   this.from.setAttribute("type","text");
+   this.from.setAttribute("value", "00:00:00");
+   this.from.id = this.node.id+"from";
+   this.from.setAttribute("class","mediumfield");
+   this.node.appendChild(this.from);
+
+   this.to = document.createTextNode(" to: ");
+   this.node.appendChild(this.to);
+   this.to = document.createElement("input");
+   this.to.setAttribute("type","text");
+   this.to.setAttribute("value", "23:59:59");
+   this.to.id = this.node.id+"to";
+   this.to.setAttribute("class","mediumfield");
+   this.node.appendChild(this.to);
+
+   this.tpers = document.createTextNode(" Trigger persistence (sec): ");
+   this.node.appendChild(this.tpers);
+   this.persistence = document.createElement("input");
+   this.persistence.setAttribute("type","text");
+   this.persistence.setAttribute("value", 10);
+   this.persistence.id = this.node.id+"persistence";
+   this.persistence.setAttribute("class","shortfield");
+   this.node.appendChild(this.persistence);
+
+   this.noft = document.createTextNode(" Trigger N to fire: ");
+   this.node.appendChild(this.noft);
+   this.noftrigger = document.createElement("input");
+   this.noftrigger.setAttribute("type","text");
+   this.noftrigger.setAttribute("value", 1);
+   this.noftrigger.id = this.node.id+"noftrigger";
+   this.noftrigger.setAttribute("class","shortfield");
+   this.node.appendChild(this.noftrigger);
+
+   this.true_condition = Array();
+   this.false_condition = Array();
+   this.trigger_condition = Array();
+   this.condition = Array();
+   this.target = Array();
+   this.conditionfr = document.createElement("div");
+   this.conditionfr.id = this.anc+"_"+this.name+"_condition";
+   this.conditionfr.className = "barlist";
+   this.conditionName = document.createElement("div");
+   this.conditionName.className = "iotext";
+   this.conditionName.innerHTML = "<b> Precondition: </b>";
+   this.conditionfr.appendChild(this.conditionName);
+   this.targetfr = document.createElement("div");
+   this.targetfr.id = this.anc+"_"+this.name+"_target";
+   this.targetfr.className = "barlist";
+   this.targetName = document.createElement("div");
+   this.targetName.className = "iotext";
+   this.targetName.innerHTML = "<b>   Action:   </b>";
+   this.targetfr.appendChild(this.targetName);
+   this.node.appendChild(this.conditionfr);
+   this.node.appendChild(this.targetfr);
+   root.appendChild(this.node);
+   if(document.getElementById(this.ruleType.id).value === "MONOSTABLE") this.setMonostable();
+   else this.setBistable();
+}
+
+function HatMeterEditor(dp, root) {
+   this.addlink = function(uri, inout) {
+	   if(inout=="IN" && !this.isin(this.input, uri)&&this.input.length<1)
+		   this.input.push(new ioLink(this.node.id, this.inputfr, uri));
+	   return true;
+   }
+   this.isin = function(outlist, uri) {
+	   for(this.i=0; this.i<outlist.length; this.i++) {
+		   if(outlist[this.i].uri == uri) return true;
+	   }
+	   return false;
+   }
+   this.create = function() {
+           if(this.input.length<1) return false;
+	   this.desc += '{\n\r  "name":"'+this.meterName.value+'",\n\r';
+	   this.desc += '  "type":"'+this.meterType.value+'",\n\r';
+	   this.desc += '  "input":"'+this.input[0].uri+'",\n\r';
+	   this.desc += '  "unit":"'+this.measureUnit.value+'",\n\r';
+	   this.desc += '  "probe":"'+this.probeType()+'",\n\r';
+	   this.desc += '  "scale_factor":"'+this.scalefactor.value+'"\n\r';
+	   this.desc += '}';
+	   this.message = new Paho.MQTT.Message(this.desc);
+	   this.message.destinationName = this.theme+"/newdevice";
+	   client.send(this.message);
+	   return true;
+   }
+   this.destroy = function() {
+      this.r.removeChild(this.node);	
+   }
+   this.doChooseUpdate = function(source) {
+      if(source === "seltype") {
+         if(this.getType() === "ElectricMeter") this.setElectricMeter();
+         else this.setAnalogMeter();
+      }
+   }
+   this.getType  = function() {
+      return document.getElementById(this.meterType.id).value;
+   }
+   this.setElectricMeter = function() {
+	   document.getElementById(this.measureUnit.id).style.visibility = "hidden";
+	   document.getElementById(this.scalefactor.id).style.visibility = "hidden";
+	   document.getElementById(this.probe.id).style.visibility = "hidden";
+   }
+   this.setAnalogMeter = function() {
+	   document.getElementById(this.measureUnit.id).style.visibility = "visible";
+	   document.getElementById(this.scalefactor.id).style.visibility = "visible";
+	   document.getElementById(this.probe.id).style.visibility = "visible";
+   }
+   this.probeType = function() {
+      return document.getElementById(this.probe.id).value;
+   }
+   this.ndp = dp;
+   this.r = root;
+   this.i = 0;
+   this.desc = "";
+   this.theme = "to/"+dp[0]+"/"+dp[1]+"/"+dp[2];
+   this.name = "NewMeter";
+   this.anc = dp[0]+"_"+dp[1]+"_"+dp[2];
+   this.node = document.createElement("div");
+   this.node.id = this.anc+"_"+this.name;
+   this.node.className = "deveditor";
+   this.node.innerHTML = "<b>"+this.name+"</b><br>";
+   this.btn = document.createElement("button");
+   this.btn.id = this.anc + "_" +this.name+"_CREATE";
+   this.btn.setAttribute("class", "edit");
+   this.btn.innerHTML = "Create";
+   this.clickcall = 'doCreate("'+dp[0]+'","'+dp[1]+'","'+dp[2]+'")';
+   this.btn.setAttribute("onclick",this.clickcall);
+   this.node.appendChild(this.btn);
+   this.selectCall = 'doChooseUpdate("'+dp[0]+'","'+dp[1]+'","'+dp[2]+'","seltype")';
+   this.meterType = document.createElement("select");
+   this.meterType.id = this.anc + "_" + this.name + "_TYPE";
+   this.meterType.setAttribute("onchange",this.selectCall);
+   this.opt1 = document.createElement("option");
+   this.opt1.setAttribute("value","ElectricMeter");
+   this.opt1t = document.createTextNode("ElectricMeter");
+   this.opt1.appendChild(this.opt1t);
+   this.meterType.appendChild(this.opt1);
+   this.opt2 = document.createElement("option");
+   this.opt2.setAttribute("value","AnalogMeter");
+   this.opt2t = document.createTextNode("AnalogMeter");
+   this.tp = document.createTextNode(" Type: ");
+   this.node.appendChild(this.tp);
+   this.opt2.appendChild(this.opt2t);
+   this.meterType.appendChild(this.opt2);
+   this.node.appendChild(this.meterType);
+   this.meterName = document.createElement("input");
+   this.meterName.setAttribute("type","text");
+   this.meterName.setAttribute("value",this.name);
+   this.meterName.id = this.node.id+"meterName";
+   this.meterName.setAttribute("class","name");
+   this.nm = document.createTextNode("  Name: ");
+   this.node.appendChild(this.nm);
+   this.node.appendChild(this.meterName);
+
+   this.probe = document.createElement("select");
+   this.probe.id = this.anc + "_" + this.name + "_PROBE";
+   this.optp1 = document.createElement("option");
+   this.optp1.setAttribute("value","default");
+   this.optp1t = document.createTextNode("default");
+   this.optp1.appendChild(this.optp1t);
+   this.probe.appendChild(this.optp1);
+   this.optp2 = document.createElement("option");
+   this.optp2.setAttribute("value","Tprobe_v12");
+   this.optp2t = document.createTextNode("Tprobe_v12");
+   this.tpp = document.createTextNode(" ProbeType: ");
+   this.node.appendChild(this.tpp);
+   this.optp2.appendChild(this.optp2t);
+   this.probe.appendChild(this.optp2);
+   this.node.appendChild(this.probe);
+
+   this.unit = document.createTextNode("  Unit: ");
+   this.node.appendChild(this.unit);
+   this.measureUnit = document.createElement("input");
+   this.measureUnit.setAttribute("type","text");
+   this.measureUnit.setAttribute("value", "K");
+   this.measureUnit.id = this.node.id+"measureUnit";
+   this.measureUnit.setAttribute("class","shortfield");
+   this.node.appendChild(this.measureUnit);
+
+   this.scale = document.createTextNode("  ScalingFactor: ");
+   this.node.appendChild(this.scale);
+   this.scalefactor = document.createElement("input");
+   this.scalefactor.setAttribute("type","text");
+   this.scalefactor.setAttribute("value", 1);
+   this.scalefactor.id = this.node.id+"scalefactor";
+   this.scalefactor.setAttribute("class","shortfield");
+   this.node.appendChild(this.scalefactor);
+
+   this.input = Array();
+   this.inputfr = document.createElement("div");
+   this.inputfr.id = this.anc+"_"+this.name+"_target";
+   this.inputfr.className = "barlist";
+   this.inputName = document.createElement("div");
+   this.inputName.className = "iotext";
+   this.inputName.innerHTML = "<b>   Source:   </b>";
+   this.inputfr.appendChild(this.inputName);
+   this.node.appendChild(this.inputfr);
+   root.appendChild(this.node);
+   if(document.getElementById(this.meterType.id).value === "ElectricMeter") this.setElectricMeter();
+   else this.setAnalogMeter();
+}
+
+function HatDevEditor(dp, root) {
+   this.addlink = function(uri, inout) {
+	   if(inout=="IN" && !this.isin(this.input, uri)&&(this.devType.value!="updown"||this.input.length<2))
+		   this.input.push(new ioLink(this.node.id, this.inputfr, uri));
+	   else if(inout=="OUT"&&!this.isin(this.output, uri)&&(this.devType.value!="updown"||this.output.length<2))
+		   this.output.push(new ioLink(this.node.id, this.outputfr, uri));
+	   else if(inout=="OUT"&&!this.isin(this.output, uri)&&(this.devType.value!="honoff"||this.output.length<1))
+		   this.output.push(new ioLink(this.node.id, this.outputfr, uri));
+	   return true;
+   }
+   this.isin = function(outlist, uri) {
+	   for(this.i=0; this.i<outlist.length; this.i++) {
+		   if(outlist[this.i].uri == uri) return true;
+	   }
+	   return false;
+   }
+   this.checkUpDown = function() {
+	if(this.devType.value!="updown") return true;
+	if(this.output.length <2 ||(this.input.length>0 && this.input.length<2)) {
+	   alert("Up Down must have two output and zero or two input!!!");
+	   return false;
+        }
+	if(this.output[0].inputName.value.indexOf("OUT") > -1) this.output[0].inputName.setAttribute("value","UP");
+	if(this.output[1].inputName.value.indexOf("OUT") > -1) this.output[1].inputName.setAttribute("value","DOWN");
+	return true;
+   }
+   this.create = function() {
+	   if(!this.checkUpDown()) return false;
+	   if(this.input.length==0 && !confirm("The new device is not connected to wall switch! OK?")) return false;
+	   this.desc += '{\n\r  "name":"'+this.devName.value+'",\n\r';
+	   this.desc += '  "type":"'+this.devType.value+'",\n\r';
+	   this.desc += '  "input": [\n\r';
+	   for(this.i=0; this.i<this.input.length; this.i++) {
+		if(this.i == 0) this.desc += '    ';
+		else this.desc += ',\n\r    ';
+		this.desc += this.input[this.i].describe();
+	   }
+	   this.desc += '\n\r    ],\n\r  "output": [\n\r';
+	   for(this.i=0; this.i<this.output.length; this.i++) {
+		if(this.i == 0) this.desc += '    ';
+		else this.desc += ',\n\r    ';
+		this.desc += this.output[this.i].describe();
+	   }
+	   this.desc += '\n\r    ]\n\r}';
+	   this.message = new Paho.MQTT.Message(this.desc);
+	   this.message.destinationName = this.theme+"/newdevice";
+	   client.send(this.message);
+	   return true;
+   }
+   this.destroy = function() {
+      this.r.removeChild(this.node);	
+   }
+   
+   this.r = root;
+   this.i = 0;
+   this.desc = "";
+   this.theme = "to/"+dp[0]+"/"+dp[1]+"/"+dp[2];
+   this.name = "NewDevice";
+   this.anc = dp[0]+"_"+dp[1]+"_"+dp[2];
+   this.node = document.createElement("div");
+   this.node.id = this.anc+"_"+this.name;
+   this.node.className = "deveditor";
+   this.node.innerHTML = "<b>"+this.name+"</b><br>";
+   this.btn = document.createElement("button");
+   this.btn.id = this.anc + "_" +this.name+"_CREATE";
+   this.btn.setAttribute("class", "edit");
+   this.btn.innerHTML = "Create";
+   this.clickcall = 'doCreate("'+dp[0]+'","'+dp[1]+'","'+dp[2]+'")';
+   this.btn.setAttribute("onclick",this.clickcall);
+   this.node.appendChild(this.btn);
+   this.devType = document.createElement("select");
+   this.devType.id = this.anc + "_" + this.name + "_TYPE";
+   this.opt1 = document.createElement("option");
+   this.opt1.setAttribute("value","onoff");
+   this.opt1t = document.createTextNode("OnOff");
+   this.opt1.appendChild(this.opt1t);
+   this.devType.appendChild(this.opt1);
+   this.opt2 = document.createElement("option");
+   this.opt2.setAttribute("value","cyclic");
+   this.opt2t = document.createTextNode("Cyclic");
+   this.opt2.appendChild(this.opt2t);
+   this.devType.appendChild(this.opt2);
+   this.opt3 = document.createElement("option");
+   this.opt3.setAttribute("value","updown");
+   this.opt3t = document.createTextNode("UpDown");
+   this.opt3.appendChild(this.opt3t);
+   this.devType.appendChild(this.opt3);
+   this.opt4 = document.createElement("option");
+   this.opt4.setAttribute("value","honoff");
+   this.opt4t = document.createTextNode("HOnOFF");
+   this.opt4.appendChild(this.opt4t);
+   this.devType.appendChild(this.opt4);
+   this.node.appendChild(this.devType);
+   this.devName = document.createElement("input");
+   this.devName.setAttribute("type","text");
+   this.devName.setAttribute("value",this.name);
+   this.devName.id = this.node.id+"devName";
+   this.devName.setAttribute("class","name");
+   this.node.appendChild(this.devName);
+   this.input = Array();
+   this.output = Array();
+   this.inputfr = document.createElement("div");
+   this.inputfr.id = this.anc+"_"+this.name+"_input";
+   this.inputfr.className = "barlist";
+   this.inputName = document.createElement("div");
+   this.inputName.className = "iotext";
+   this.inputName.innerHTML = "<b> Input: </b>";
+   this.inputfr.appendChild(this.inputName);
+   this.outputfr = document.createElement("div");
+   this.outputfr.id = this.anc+"_"+this.name+"_output";
+   this.outputfr.className = "barlist";
+   this.outputName = document.createTextNode("Output:");
+   this.outputName = document.createElement("div");
+   this.outputName.className = "iotext";
+   this.outputName.innerHTML = "<b> Output: </b>";
+   this.outputfr.appendChild(this.outputName);
+   this.node.appendChild(this.inputfr);
+   this.node.appendChild(this.outputfr);
+   root.appendChild(this.node);
+}
+   
+
+function HatCyclic(dp, root, desc) {
+   this.statusUpdate = function(val) {
+      this.status = val.split("+");
+      if(this.status.length!=desc.output.length) return false;
+      for(this.i=0; this.i<desc.output.length; this.i++) this.component[this.i].statusUpdate(this.status[this.i]);
+      return true;
+   }
+   this.doClick = function() {
+        this.cmd = "{cmd:";
+        if(this.getStatus().indexOf("OFF") >= 0 ) {
+           for(this.i = 0; this.i<this.component.length; this.i++) {
+		this.cmd += "ON";
+		if(this.i < this.component.length - 1) this.cmd += "+";
+	   }
+	}
+        else {
+           for(this.i = 0; this.i<this.component.length; this.i++) {
+		this.cmd += "OFF";
+		if(this.i < this.component.length - 1) this.cmd += "+";
+	   }
+        }
+	message = new Paho.MQTT.Message(this.cmd);
+	message.destinationName = this.cmdtopic;
+	client.send(message);
+   }
+   this.doClickC = function(comp) {
+	this.cmd = "{cmd:";
+        for(this.i=0; this.i<this.component.length; this.i++) {
+	  if(comp == this.component[this.i].name) {
+	     if(this.component[this.i].value == "ON") this.cmd += "OFF";
+	     else this.cmd += "ON";
+	  }
+	  else this.cmd += this.component[this.i].value;
+	  if(this.i<this.component.length-1) this.cmd += "+";
+	}
+	this.cmd +="}";
+	this.message = new Paho.MQTT.Message(this.cmd);
+	this.message.destinationName = this.cmdtopic;
+	client.send(this.message);
+   }
+   this.getStatus = function() {
+	this.result = "";
+        for(this.i=0; this.i<this.component.length; this.i++) {
+	   this.result += this.component[this.i].value;
+	   if(this.i<this.component.length-1) this.result += "+";
+	}
+	return this.result;
+   }
+   this.destroy = function () {
+        this.cmd = '{"name":"'+this.name+'"}';
+	this.message = new Paho.MQTT.Message(this.cmd);
+	this.message.destinationName = this.destroytopic;
+	client.send(this.message);
+        this.r.removeChild(this.node);	
+   }
+   this.enableclr = function(md) {
+      if(md == true) this.node.setAttribute("onclick",'changeColor("'+this.node.id+'","'+this.color+'")');
+      else this.node.removeAttribute("onclick");
+   }
+   this.r = root 
+   this.cmd = "";
+   this.message = "";
+   this.status = Array();
+   this.name = desc.name;
+   this.anc = dp[0]+"_"+dp[1]+"_"+dp[2];
+   this.node = document.createElement("div");
+   this.node.id = this.anc+"_"+this.name;
+   this.node.className = "devholder";
+   if(desc.type=="cyclic") this.node.innerHTML = "<b>"+this.name+"*</b><br>";
+   else this.node.innerHTML = "<b>"+this.name+"</b><br>";
+   this.btn = document.createElement("button");
+   this.btn.id = this.anc+"_"+this.name + "BTN";
+   this.btn.className = "devswitch";
+   this.clickcall = 'doClickCall("'+dp[0]+'","'+dp[1]+'","'+dp[2]+'","'+this.name+'")';
+   this.btn.setAttribute("onclick", this.clickcall);
+   this.node.appendChild(this.btn);
+   this.imgid = "I_"+this.anc+"_"+this.name;
+   this.cmdtopic = "to/"+dp[0]+"/"+dp[1]+"/"+dp[2]+"/"+this.name;
+   this.destroytopic = "to/"+dp[0]+"/"+dp[1]+"/"+dp[2]+"/devdelete";
+   this.input = desc.input;
+   this.ndp = Array();
+   for(j=0; j<dp.length; j++) this.ndp.push(dp[j]);
+   this.ndp.push(this.name);
+   this.component = Array();
+   for(this.i=0; this.i<desc.output.length; this.i++)
+		this.component[this.i] = new HatComponent(this.ndp, this.node, desc.output[this.i]);
+   root.appendChild(this.node);
+   this.color = "gray";
+}
+
+function HatHcomponent(dp, root, desc) {
+   this.statusUpdate = function(val) {
+      if(val == this.value) return true;
+      this.value = val;
+      var imguri;
+      if(this.value == "OFF") imguri = "/img/Button-Blank-Green-icon.png";
+      else imguri = "/img/Button-Blank-Red-icon.png";
+      document.getElementById(this.imgid).src = imguri;
+      return true;
+   }
+
+   this.value = desc.status;
+   this.name = desc.alias;
+   this.gpio = desc.name;
+   this.anc = dp[0]+"_"+dp[1]+"_"+dp[2]+"_"+dp[3];
+   this.node = document.createElement("div");
+   this.node.className = "devholder";
+   this.node.id = "H_"+this.anc+"_"+this.name;
+   this.node.className = "bholder";
+   this.btn = document.createElement("button");
+   this.btn.id = this.anc+"_"+this.name;
+   this.imgid = "I_"+this.anc+"_"+this.name;
+   this.cmdtopic = "to/"+dp[0]+"/"+dp[1]+"/"+dp[2]+"/"+dp[3];
+   this.btn.className = "switch";
+   if(this.value=="OFF") this.btn.innerHTML = '<img id="'+this.imgid+'" src="/img/Button-Blank-Green-icon.png" class=button>' + this.name;
+   else this.btn.innerHTML = '<img id="'+this.imgid+'" src="/img/Button-Blank-Red-icon.png" class=button>' + this.name;
+   root.appendChild(this.node);
+   this.node.appendChild(this.btn);
+}
+
+function HatComponent(dp, root, desc) {
+   this.statusUpdate = function(val) {
+      if(val == this.value) return true;
+      this.value = val;
+      var imguri;
+      if(this.value == "OFF") imguri = "/img/Button-Blank-Green-icon.png";
+      else imguri = "/img/Button-Blank-Red-icon.png";
+      document.getElementById(this.imgid).src = imguri;
+      return true;
+   }
+   this.doClick = function() {
+	var cmd;
+	if(this.value=="ON") cmd = "{cmd:OFF}";
+	else cmd = "{cmd:ON}";
+	message = new Paho.MQTT.Message(cmd);
+	message.destinationName = this.cmdtopic;
+	client.send(message);
+   }
+
+   this.value = desc.status;
+   this.name = desc.alias;
+   this.gpio = desc.name;
+   this.anc = dp[0]+"_"+dp[1]+"_"+dp[2]+"_"+dp[3];
+   this.node = document.createElement("div");
+   this.node.className = "devholder";
+   this.node.id = "H_"+this.anc+"_"+this.name;
+   this.node.className = "bholder";
+   this.btn = document.createElement("button");
+   this.btn.id = this.anc+"_"+this.name;
+   this.imgid = "I_"+this.anc+"_"+this.name;
+   this.cmdtopic = "to/"+dp[0]+"/"+dp[1]+"/"+dp[2]+"/"+dp[3];
+   this.btn.className = "switch";
+   this.clickcall = 'doClickCallC("'+dp[0]+'","'+dp[1]+'","'+dp[2]+'","'+dp[3]+'","'+this.name+'")';
+   this.btn.setAttribute("onclick", this.clickcall);
+   if(this.value=="OFF") this.btn.innerHTML = '<img id="'+this.imgid+'" src="/img/Button-Blank-Green-icon.png" class=button>' + this.name;
+   else this.btn.innerHTML = '<img id="'+this.imgid+'" src="/img/Button-Blank-Red-icon.png" class=button>' + this.name;
+   root.appendChild(this.node);
+   this.node.appendChild(this.btn);
+}
+
+
+function HatBistableRule(dp, root, desc) {
+   this.destroy = function () {
+        this.cmd = '{"name":"'+this.name+'"}';
+	this.message = new Paho.MQTT.Message(this.cmd);
+	this.message.destinationName = this.destroytopic;
+	client.send(this.message);
+        this.r.removeChild(this.node);	
+   }
+   this.enableclr = function(md) {
+      if(md == true) this.node.setAttribute("onclick",'changeColor("'+this.node.id+'","'+this.color+'")');
+      else this.node.removeAttribute("onclick");
+   }
+
+   this.i=0;
+   this.r = root;
+   this.value = desc.status;
+   this.name = desc.name;
+   this.type = desc.type;
+   this.anc = dp[0]+"_"+dp[1]+"_"+dp[2];
+   this.destroytopic = "to/"+dp[0]+"/"+dp[1]+"/"+dp[2]+"/ruledelete";
+   this.node = document.createElement("div");
+   this.node.id = "H_"+this.anc+"_"+this.name;
+   this.node.className = "ruleholder";
+   this.header = document.createElement("div");
+   this.header.id = this.node.id+".hd";
+   this.header.innerHTML = this.name+": "+this.type;
+   this.active = document.createElement("div");
+   this.active.id = this.node.id+".active";
+   this.active.className = "rulefield";
+   this.active.innerHTML = "Active: "+desc.from+" - "+desc.to;
+   this.condition = document.createElement("div");
+   this.condition.id = this.node.id+".cond";
+   this.condition.className = "rulefield";
+   this.condition.innerHTML = "Enabled if: ";
+   if(desc.enabling_true_condition.length >0) {
+	   for(this.i=0; this.i<desc.enabling_true_condition.length; this.i++){
+	       this.condition.innerHTML+=mkAlias(desc.enabling_true_condition[this.i].name, desc.enabling_true_condition[this.i].alias);
+	       this.condition.innerHTML+="=T, ";
+	   }
+   }
+   if(desc.enabling_false_condition.length >0) {
+	   for(this.i=0; this.i<desc.enabling_false_condition.length; this.i++){
+	       this.condition.innerHTML+=mkAlias(desc.enabling_false_condition[this.i].name, desc.enabling_false_condition[this.i].alias);
+	       this.condition.innerHTML+="=F";
+	       if(this.i < desc.enabling_false_condition.length-1) this.condition.innerHTML+=", ";
+	   }
+   }
+   this.action = document.createElement("div");
+   this.action.id = this.node.id+".cond";
+   this.action.className = "rulefield";
+   this.action.innerHTML = "Action: target = [";
+   if(desc.action_target.length >0) {
+	   for(this.i=0; this.i<desc.action_target.length; this.i++){
+	       this.action.innerHTML+=mkAlias(desc.action_target[this.i].name, desc.action_target[this.i].alias);
+	       if(this.i<desc.action_target.length-1) this.action.innerHTML+=", ";
+	   }
+           this.action.innerHTML+="], cmd = [->" + desc.action_on + " -(*" + desc.repeat_every+"sec)->"+desc.action_off+"]";
+   }
+   root.appendChild(this.node);
+   this.node.appendChild(this.header);
+   this.node.appendChild(this.active);
+   this.node.appendChild(this.condition);
+   this.node.appendChild(this.action);
+   this.color = "gray";
+}
+
+function mkAlias(name, al) {
+  if(al.length>0) return al;
+  var res = name.split("/");
+  return res[res.length-1];
+}
+
+function HatMonostableRule(dp, root, desc) {
+   this.enableclr = function(md) {
+      if(md == true) this.node.setAttribute("onclick",'changeColor("'+this.node.id+'","'+this.color+'")');
+      else this.node.removeAttribute("onclick");
+   }
+   this.destroy = function () {
+        this.cmd = '{"name":"'+this.name+'"}';
+	this.message = new Paho.MQTT.Message(this.cmd);
+	this.message.destinationName = this.destroytopic;
+	client.send(this.message);
+        this.r.removeChild(this.node);	
+   }
+   this.r = root 
+   this.value = desc.status;
+   this.name = desc.name;
+   this.type = desc.type;
+   this.destroytopic = "to/"+dp[0]+"/"+dp[1]+"/"+dp[2]+"/ruledelete";
+   this.anc = dp[0]+"_"+dp[1]+"_"+dp[2];
+   this.node = document.createElement("div");
+   this.node.id = "H_"+this.anc+"_"+this.name;
+   this.node.className = "ruleholder";
+   this.header = document.createElement("div");
+   this.header.id = this.node.id+".hd";
+   this.header.className = "rulehd";
+   this.header.innerHTML = this.name+": "+this.type;
+   this.active = document.createElement("div");
+   this.active.className = "rulefield";
+   this.active.id = this.node.id+".hd";
+   this.active.innerHTML = "Active: "+desc.from+" - "+desc.to;
+   this.condition = document.createElement("div");
+   this.condition.id = this.node.id+".cond";
+   this.condition.className = "rulefield";
+   this.condition.innerHTML = "Enabled if: ";
+   if(desc.enabling_true_condition.length >0) {
+	   for(this.i=0; this.i<desc.enabling_true_condition.length; this.i++){
+	       this.condition.innerHTML+=mkAlias(desc.enabling_true_condition[this.i].name, desc.enabling_true_condition[this.i].alias);
+	       this.condition.innerHTML+="=T, ";
+	   }
+   }
+   if(desc.enabling_false_condition.length >0) {
+	   for(this.i=0; this.i<desc.enabling_false_condition.length; this.i++){
+	       this.condition.innerHTML+=mkAlias(desc.enabling_false_condition[this.i].name, desc.enabling_false_condition[this.i].alias);
+	       this.condition.innerHTML+="=F";
+	       if(this.i < desc.enabling_false_condition.length-1) this.condition.innerHTML+=", ";
+	   }
+   }
+   this.clause = document.createElement("div");
+   this.clause.id = this.node.id+".clause";
+   this.clause.className = "rulefield";
+   this.clause.innerHTML = "Trigger ";
+   if(desc.clause.length >0) {
+	   this.clause.innerHTML += "(" + desc.min_conditions+"/"+desc.clause.length+", W="+desc.event_duration+"sec): ";
+	   for(this.i=0; this.i<desc.clause.length; this.i++){
+	       this.clause.innerHTML+=mkAlias(desc.clause[this.i].name, desc.clause[this.i].alias);
+	       if(this.i<desc.clause.length-1) this.clause.innerHTML+=", ";
+	   }
+   }
+   else  this.clause.innerHTML = ": - ";
+   this.action = document.createElement("div");
+   this.action.id = this.node.id+".cond";
+   this.action.className = "rulefield";
+   this.action.innerHTML = "Action: target = [";
+   if(desc.action_target.length >0) {
+	   for(this.i=0; this.i<desc.action_target.length; this.i++){
+	       this.action.innerHTML+=mkAlias(desc.action_target[this.i].name, desc.action_target[this.i].alias);
+	       if(this.i<desc.action_target.length-1) this.action.innerHTML+=", ";
+	   }
+	   this.action.innerHTML+="], cmd = [->" + desc.action_on + "-(" + desc.duration+"sec)-> "+desc.action_off+"]";
+   }
+   root.appendChild(this.node);
+   this.node.appendChild(this.header);
+   this.node.appendChild(this.active);
+   this.node.appendChild(this.condition);
+   this.node.appendChild(this.clause);
+   this.node.appendChild(this.action);
+   this.color = "gray";
+}
+
+function HatUpdown(dp, root, desc) {
+   this.statusUpdate =function(val) {
+      this.status = val.split('+');
+      this.upcomponent.statusUpdate(this.status[0]);
+      this.downcomponent.statusUpdate(this.status[1]);
+      return true;
+   }
+   this.destroy = function () {
+        this.cmd = '{"name":"'+this.name+'"}';
+	this.message = new Paho.MQTT.Message(this.cmd);
+	this.message.destinationName = this.destroytopic;
+	client.send(this.message);
+        this.r.removeChild(this.node);	
+   }
+   this.enableclr = function(md) {
+      if(md == true) this.node.setAttribute("onclick",'changeColor("'+this.node.id+'","'+this.color+'")');
+      else this.node.removeAttribute("onclick");
+   }
+   this.doClickC = function(comp) {
+	this.cmd = "{cmd:";
+	if(comp == this.upcomponent.name) {
+	     if(this.downcomponent.value == "OFF" && this.upcomponent.value == "OFF") this.cmd += "ON+OFF";
+	     else if(this.upcomponent.value == "ON" && this.downcomponent.value == "OFF") this.cmd += "OFF+OFF";
+	     else if(this.downcomponent.value == "ON") this.cmd += "OFF+OFF";
+	}
+	else {
+	     if(this.upcomponent.value == "OFF" && this.downcomponent.value == "OFF") this.cmd += "OFF+ON";
+	     else if(this.upcomponent.value == "OFF" && this.downcomponent.value == "ON") this.cmd += "OFF+OFF";
+	     else if(this.upcomponent.value == "ON") this.cmd += "OFF+OFF";
+	}
+	this.cmd +="}";
+	this.message = new Paho.MQTT.Message(this.cmd);
+	this.message.destinationName = this.cmdtopic;
+	client.send(this.message);
+   }
+   this.r = root 
+   this.j = 0;
+   this.name = desc.name;
+   this.ndp = Array();
+   for(this.j=0; this.j<dp.length; this.j++) this.ndp.push(dp[this.j]);
+   this.ndp.push(this.name);
+   this.cmd = "";
+   this.message = "";
+   this.destroytopic = "to/"+dp[0]+"/"+dp[1]+"/"+dp[2]+"/devdelete";
+   this.cmdtopic = "to/"+dp[0]+"/"+dp[1]+"/"+dp[2]+"/"+this.name;
+   this.status = Array();
+   this.anc = dp[0]+"_"+dp[1]+"_"+dp[2];
+   this.node = document.createElement("div");
+   this.node.id = this.anc+"_"+this.name;
+   this.node.className = "devholder";
+   this.node.innerHTML = "<b>"+this.name+"^</b><br>";
+//   this.upbtn = document.createElement("button");
+//   this.upbtn.id = this.anc+"_"+this.name + "UPBTN";
+//   this.upbtn.className = "devswitch";
+//   this.downbtn = document.createElement("button");
+//   this.downbtn.id = this.anc+"_"+this.name + "DOWNBTN";
+//   this.downbtn.className = "devswitch";
+//   this.node.appendChild(this.upbtn);
+//   this.node.appendChild(this.downbtn);
+   root.appendChild(this.node);
+   this.upcomponent = new HatComponent(this.ndp, this.node, desc.output[0]);
+   this.downcomponent = new HatComponent(this.ndp, this.node, desc.output[1]);
+   this.color = "gray";
+}
+
+function HatAnalogMeter(dp, root, desc) {
+   this.statusUpdate = function(val) {
+      if(val.value!=undefined) document.getElementById(this.display.id).setAttribute("value", val.value+" ("+val.unit+")");
+      return true;
+   }
+   this.enableclr = function(md) {
+      if(md == true) this.node.setAttribute("onclick",'changeColor("'+this.node.id+'","'+this.color+'")');
+      else this.node.removeAttribute("onclick");
+   }
+   this.destroy = function () {
+        this.cmd = '{"name":"'+this.name+'","type":"'+this.type+'"}';
+	this.message = new Paho.MQTT.Message(this.cmd);
+	this.message.destinationName = this.destroytopic;
+	client.send(this.message);
+        this.r.removeChild(this.node);	
+   }
+   this.r = root;;
+   this.destroytopic = "to/"+dp[0]+"/"+dp[1]+"/"+dp[2]+"/devdelete";
+   this.name = desc.name;
+   this.type = desc.type;
+   this.anc = dp[0]+"_"+dp[1]+"_"+dp[2];
+   this.node = document.createElement("div");
+   this.node.id = this.anc+"_"+this.name;
+   this.node.className = "devholder";
+   this.node.innerHTML = "<b>"+this.name+"</b><br>";
+   this.display = document.createElement("input");
+   this.display.setAttribute("type","test");
+   this.display.id = this.node.id+"_display";
+   this.display.setAttribute("class","measure");
+   this.display.setAttribute("value",desc.value+" ("+desc.unit+")");
+   this.node.appendChild(this.display);
+   this.ndp = Array();
+   for(j=0; j<dp.length; j++) this.ndp.push(dp[j]);
+   this.ndp.push(this.name);
+   root.appendChild(this.node);
+   this.color = "gray";
+}
+
+function HatElectricMeter(dp, root, desc) {
+   this.statusUpdate = function(val) {
+      if(val.value!=undefined) document.getElementById(this.display.id).setAttribute("value", val.value+" (W)");
+      return true;
+   }
+   this.enableclr = function(md) {
+      if(md == true) this.node.setAttribute("onclick",'changeColor("'+this.node.id+'","'+this.color+'")');
+      else this.node.removeAttribute("onclick");
+   }
+   this.destroy = function () {
+        this.cmd = '{"name":"'+this.name+'","type":"'+this.type+'"}';
+	this.message = new Paho.MQTT.Message(this.cmd);
+	this.message.destinationName = this.destroytopic;
+	client.send(this.message);
+        this.r.removeChild(this.node);	
+   }
+   this.r = root;
+   this.destroytopic = "to/"+dp[0]+"/"+dp[1]+"/"+dp[2]+"/devdelete";
+   this.name = desc.name;
+   this.type = desc.type;
+   this.anc = dp[0]+"_"+dp[1]+"_"+dp[2];
+   this.node = document.createElement("div");
+   this.node.id = this.anc+"_"+this.name;
+   this.node.className = "devholder";
+   this.node.innerHTML = "<b>"+this.name+"</b><br>";
+   this.display = document.createElement("input");
+   this.display.setAttribute("type","test");
+   this.display.id = this.node.id+"_display";
+   this.display.setAttribute("class","measure");
+   this.display.setAttribute("value",desc.value+" (W)");
+   this.node.appendChild(this.display);
+   this.ndp = Array();
+   for(j=0; j<dp.length; j++) this.ndp.push(dp[j]);
+   this.ndp.push(this.name);
+   root.appendChild(this.node);
+   this.color = "gray";
+}
+
+function HatHonoff(dp, root, desc) {
+   this.statusUpdate = function(val) {
+      this.status = val.split("+");
+      if(this.status.length!=desc.output.length) return false;
+      for(this.i=0; this.i<desc.output.length; this.i++) this.component[this.i].statusUpdate(this.status[this.i]);
+      return true;
+   }
+   this.afterClick = function(dest){
+  	   var message = new Paho.MQTT.Message("{cmd:OFF}");
+	   message.destinationName = dest;
+	   client.send(message);
+   }
+   this.doClick = function() {
+	this.cmd = "{cmd:ON}";
+	message = new Paho.MQTT.Message(this.cmd);
+	message.destinationName = this.cmdtopic;
+	client.send(message);
+        setTimeout(this.afterClick, 500, this.cmdtopic);
+   }
+   this.doClickC = function(comp) {
+	this.cmd = "{cmd:";
+        for(this.i=0; this.i<this.component.length; this.i++) {
+	  if(comp == this.component[this.i].name) {
+	     if(this.component[this.i].value == "ON") this.cmd += "OFF";
+	     else this.cmd += "ON";
+	  }
+	  else this.cmd += this.component[this.i].value;
+	  if(this.i<this.component.length-1) this.cmd += "+";
+	}
+	this.cmd +="}";
+	this.message = new Paho.MQTT.Message(this.cmd);
+	this.message.destinationName = this.cmdtopic;
+	client.send(this.message);
+   }
+   this.getStatus = function() {
+	this.result = "";
+        for(this.i=0; this.i<this.component.length; this.i++) {
+	   this.result += this.component[this.i].value;
+	   if(this.i<this.component.length-1) this.result += "+";
+	}
+	return this.result;
+   }
+   this.destroy = function () {
+        this.cmd = '{"name":"'+this.name+'"}';
+	this.message = new Paho.MQTT.Message(this.cmd);
+	this.message.destinationName = this.destroytopic;
+	client.send(this.message);
+        this.r.removeChild(this.node);	
+   }
+   this.enableclr = function(md) {
+      if(md == true) this.node.setAttribute("onclick",'changeColor("'+this.node.id+'","'+this.color+'")');
+      else this.node.removeAttribute("onclick");
+   }
+   this.r = root 
+   this.cmd = "";
+   this.message = "";
+   this.status = Array();
+   this.name = desc.name;
+   this.anc = dp[0]+"_"+dp[1]+"_"+dp[2];
+   this.node = document.createElement("div");
+   this.node.id = this.anc+"_"+this.name;
+   this.node.className = "devholder";
+   this.node.innerHTML = "<b>"+this.name+"</b><br>";
+   this.btn = document.createElement("button");
+   this.btn.id = this.anc+"_"+this.name + "BTN";
+   this.btn.className = "devswitch";
+   this.clickcall = 'doClickCall("'+dp[0]+'","'+dp[1]+'","'+dp[2]+'","'+this.name+'")';
+   this.btn.setAttribute("onclick", this.clickcall);
+   this.node.appendChild(this.btn);
+   this.imgid = "I_"+this.anc+"_"+this.name;
+   this.cmdtopic = "to/"+dp[0]+"/"+dp[1]+"/"+dp[2]+"/"+this.name;
+   this.destroytopic = "to/"+dp[0]+"/"+dp[1]+"/"+dp[2]+"/devdelete";
+   this.input = desc.input;
+   this.ndp = Array();
+   for(j=0; j<dp.length; j++) this.ndp.push(dp[j]);
+   this.ndp.push(this.name);
+   this.component = Array();
+   for(this.i=0; this.i<desc.output.length; this.i++)
+		this.component[this.i] = new HatHcomponent(this.ndp, this.node, desc.output[this.i]);
+   root.appendChild(this.node);
+   this.color = "gray";
+}
+
+function HatOnoff(dp, root, desc) {
+   this.statusUpdate = function(val) {
+      this.component.statusUpdate(val);
+      return true;
+   }
+   this.doClickC = function() {
+      this.component.doClick();
+   }
+   this.enableclr = function(md) {
+      if(md == true) this.node.setAttribute("onclick",'changeColor("'+this.node.id+'","'+this.color+'")');
+      else this.node.removeAttribute("onclick");
+   }
+   this.destroy = function () {
+        this.cmd = '{"name":"'+this.name+'"}';
+	this.message = new Paho.MQTT.Message(this.cmd);
+	this.message.destinationName = this.destroytopic;
+	client.send(this.message);
+        this.r.removeChild(this.node);	
+   }
+   this.r = root;;
+   this.component;
+   this.destroytopic = "to/"+dp[0]+"/"+dp[1]+"/"+dp[2]+"/devdelete";
+   this.name = desc.name;
+   this.anc = dp[0]+"_"+dp[1]+"_"+dp[2];
+   this.node = document.createElement("div");
+   this.node.id = this.anc+"_"+this.name;
+   this.node.className = "devholder";
+   this.node.innerHTML = "<b>"+this.name+"</b><br>";
+   this.ndp = Array();
+   for(j=0; j<dp.length; j++) this.ndp.push(dp[j]);
+   this.ndp.push(this.name);
+   if(desc.output.length == 1)
+      this.component = new HatComponent(this.ndp, this.node, desc.output[0]);
+   root.appendChild(this.node);
+   this.color = "gray";
+}
+
+function HatRulerService(dp, desc) {
+  this.update = function(dp, desc) {
+    for(k=0; k<desc.length; k++) {
+        if(desc[k].type == "MONOSTABLE" && this.items[desc[k].name] == undefined)
+	      this.items[desc[k].name] = new HatMonostableRule(dp, this.rules,desc[k]);
+	else if(desc[k].type == "BISTABLE" && this.items[desc[k].name] == undefined)
+	      this.items[desc[k].name] = new HatBistableRule(dp, this.rules,desc[k]);
+    }
+  }
+  this.statusUpdate = function(path,value) {
+     if(this.items[path[0]] == undefined) return false;
+     else return this.items[path[0]].statusUpdate(value);
+  }
+  this.addDevice = function() {
+     this.deveditor= new HatRuleEditor(this.ndp, this.node);
+     this.editbtn.disabled = true;
+     this.editbtn.style.backgroundColor = "Gray";
+  }
+  this.editorReset = function() {
+     this.deveditor.destroy();
+     this.editbtn.disabled = false;
+     this.editbtn.style.backgroundColor = "Red";
+  }
+  this.enableclr = function(md) {
+     if(md == true) {
+	this.clearbtn.style.backgroundColor = "Yellow";
+        this.clearbtn.innerHTML = "CLEAR";
+        this.clearbtn.setAttribute("onclick",this.destroycall);
+     }
+     else {
+        this.clearbtn.style.backgroundColor = "Red";
+        this.clearbtn.innerHTML = "ClrEN";
+        this.clearbtn.setAttribute("onclick",this.clearcall);
+     }
+     for(var key in this.items) if(key != "unique") this.items[key].enableclr(md);
+  }
+  this.destroy = function() {
+     for(var key in this.items) {
+	     if(key != "unique"&&this.items[key].node.style.backgroundColor=="gray") {
+		     this.items[key].destroy();
+		     delete this.items[key];
+	     }
+     }
+     for(var key in this.items) if(key != "unique") this.items[key].enableclr(false);
+     this.clearbtn.innerHTML = "ClrEN";
+     this.clearbtn.style.backgroundColor = "Red";
+     this.clearbtn.setAttribute("onclick",this.clearcall);
+  }
+  this.deveditor;
+  this.ndp = Array();
+  this.ndp.push(dp[0]);
+  this.ndp.push(dp[1]);
+  this.ndp.push(dp[2]);
+  this.name = dp[2];
+  this.anc = dp[0]+"_"+dp[1];
+  this.items = Array();
+  this.node = document.createElement("div");
+  this.node.id = this.anc+"_"+this.name;
+  this.node.className="headersrv";
+  this.node.innerHTML = "<b> Service: "+this.name+"</b>";
+  this.editbtn = document.createElement("button");
+  this.editbtn.id = "BTN_"+this.node.id;
+  this.editbtn.className="edit";
+  this.editbtn.innerHTML = "Add";
+  this.clickcall = 'doEdit("'+dp[0]+'","'+dp[1]+'","'+this.name+'")';
+  this.editbtn.setAttribute("onclick",this.clickcall);
+  this.clearbtn = document.createElement("button");
+  this.clearbtn.id = "CBTN_"+this.node.id;
+  this.clearbtn.className="edit";
+  this.clearbtn.innerHTML = "ClrEN";
+  this.clearcall = 'clearEnable("'+dp[0]+'","'+dp[1]+'","'+this.name+'",true)';
+  this.destroycall = 'doClear("'+dp[0]+'","'+dp[1]+'","'+this.name+'")';
+  this.clearbtn.setAttribute("onclick",this.clearcall);
+  this.node.appendChild(this.editbtn);
+  this.node.appendChild(this.clearbtn);
+  this.rules = document.createElement("div");
+  this.rules.name="rules";
+  this.node.appendChild(this.rules);
+  this.rules.className="header";
+  document.getElementById(this.anc).appendChild(this.node);
+  this.update(dp, desc);
+}
+
+function HatMeterService(dp, desc) {
+  this.update = function(dp, desc) {
+    for(k=0; k<desc.length; k++) {
+        if(desc[k].type == "AnalogMeter" && this.items[desc[k].name] == undefined)
+	      this.items[desc[k].name] = new HatAnalogMeter(dp, this.devices,desc[k]);
+	else if(desc[k].type == "ElectricMeter" && this.items[desc[k].name] == undefined)
+	      this.items[desc[k].name] = new HatElectricMeter(dp, this.devices,desc[k]);
+    }
+  }
+  this.statusUpdate = function(path,value) {
+     if(this.items[path[0]] == undefined) return false;
+     else return this.items[path[0]].statusUpdate(value);
+  }
+  this.addDevice = function() {
+     this.deveditor= new HatMeterEditor(this.ndp, this.node);
+     this.editbtn.disabled = true;
+     this.editbtn.style.backgroundColor = "Gray";
+  }
+  this.editorReset = function() {
+     this.deveditor.destroy();
+     this.editbtn.disabled = false;
+     this.editbtn.style.backgroundColor = "Red";
+  }
+  this.enableclr = function(md) {
+     if(md == true) {
+	this.clearbtn.style.backgroundColor = "Yellow";
+        this.clearbtn.innerHTML = "CLEAR";
+        this.clearbtn.setAttribute("onclick",this.destroycall);
+     }
+     else {
+        this.clearbtn.style.backgroundColor = "Red";
+        this.clearbtn.innerHTML = "ClrEN";
+        this.clearbtn.setAttribute("onclick",this.clearcall);
+     }
+     for(var key in this.items) if(key != "unique") this.items[key].enableclr(md);
+  }
+  this.destroy = function() {
+     for(var key in this.items) {
+	     if(key != "unique"&&this.items[key].node.style.backgroundColor=="gray") {
+		     this.items[key].destroy();
+		     delete this.items[key];
+	     }
+     }
+     for(var key in this.items) if(key != "unique") this.items[key].enableclr(false);
+     this.clearbtn.innerHTML = "ClrEN";
+     this.clearbtn.style.backgroundColor = "Red";
+     this.clearbtn.setAttribute("onclick",this.clearcall);
+  }
+  this.deveditor;
+  this.ndp = Array();
+  this.ndp.push(dp[0]);
+  this.ndp.push(dp[1]);
+  this.ndp.push(dp[2]);
+  this.name = dp[2];
+  this.anc = dp[0]+"_"+dp[1];
+  this.items = Array();
+  this.node = document.createElement("div");
+  this.node.id = this.anc+"_"+this.name;
+  this.node.className="headersrv";
+  this.node.innerHTML = "<b> Service: "+this.name+"</b>";
+  this.editbtn = document.createElement("button");
+  this.editbtn.id = "BTN_"+this.node.id;
+  this.editbtn.className="edit";
+  this.editbtn.innerHTML = "Add";
+  this.clickcall = 'doEdit("'+dp[0]+'","'+dp[1]+'","'+this.name+'")';
+  this.editbtn.setAttribute("onclick",this.clickcall);
+  this.clearbtn = document.createElement("button");
+  this.clearbtn.id = "CBTN_"+this.node.id;
+  this.clearbtn.className="edit";
+  this.clearbtn.innerHTML = "ClrEN";
+  this.clearcall = 'clearEnable("'+dp[0]+'","'+dp[1]+'","'+this.name+'",true)';
+  this.destroycall = 'doClear("'+dp[0]+'","'+dp[1]+'","'+this.name+'")';
+  this.clearbtn.setAttribute("onclick",this.clearcall);
+  this.node.appendChild(this.editbtn);
+  this.node.appendChild(this.clearbtn);
+  this.devices = document.createElement("div");
+  this.devices.name="devices";
+  this.node.appendChild(this.devices);
+  this.devices.className="header";
+  document.getElementById(this.anc).appendChild(this.node);
+  this.update(dp, desc);
+}
+
+function HatDevService(dp, desc) {
+  this.update = function(dp, desc) {
+    for(k=0; k<desc.length; k++) {
+        if(desc[k].type == "honoff" && this.items[desc[k].name]== undefined)
+              this.items[desc[k].name] = new HatHonoff(dp, this.devices, desc[k]);
+        else if((desc[k].type == "cyclic" || desc[k].type == "onoff")&& desc[k].output.length > 1 && this.items[desc[k].name] == undefined)
+	      this.items[desc[k].name] = new HatCyclic(dp, this.devices,desc[k]);
+	else if(desc[k].type == "onoff" && desc[k].output.length == 1 && this.items[desc[k].name] == undefined)
+	      this.items[desc[k].name] = new HatOnoff(dp, this.devices,desc[k]);
+	else if(desc[k].type == "updown" && desc[k].output.length == 2 && this.items[desc[k].name] == undefined)
+	      this.items[desc[k].name] = new HatUpdown(dp, this.devices,desc[k]);
+    }
+  }
+  this.statusUpdate = function(path,value) {
+     if(this.items[path[0]] == undefined) return false;
+     else return this.items[path[0]].statusUpdate(value);
+  }
+  this.addDevice = function() {
+     this.deveditor= new HatDevEditor(this.ndp, this.node);
+     this.editbtn.disabled = true;
+     this.editbtn.style.backgroundColor = "Gray";
+  }
+  this.editorReset = function() {
+     this.deveditor.destroy();
+     this.editbtn.disabled = false;
+     this.editbtn.style.backgroundColor = "Red";
+  }
+  this.enableclr = function(md) {
+     if(md == true) {
+	this.clearbtn.style.backgroundColor = "Yellow";
+        this.clearbtn.innerHTML = "CLEAR";
+        this.clearbtn.setAttribute("onclick",this.destroycall);
+     }
+     else {
+        this.clearbtn.style.backgroundColor = "Red";
+        this.clearbtn.innerHTML = "ClrEN";
+        this.clearbtn.setAttribute("onclick",this.clearcall);
+     }
+     for(var key in this.items) if(key != "unique") this.items[key].enableclr(md);
+  }
+  this.destroy = function() {
+     for(var key in this.items) {
+	     if(key != "unique"&&this.items[key].node.style.backgroundColor=="gray") {
+		     this.items[key].destroy();
+		     delete this.items[key];
+	     }
+     }
+     for(var key in this.items) if(key != "unique") this.items[key].enableclr(false);
+     this.clearbtn.innerHTML = "ClrEN";
+     this.clearbtn.style.backgroundColor = "Red";
+     this.clearbtn.setAttribute("onclick",this.clearcall);
+  }
+  this.deveditor;
+  this.ndp = Array();
+  this.ndp.push(dp[0]);
+  this.ndp.push(dp[1]);
+  this.ndp.push(dp[2]);
+  this.name = dp[2];
+  this.anc = dp[0]+"_"+dp[1];
+  this.items = Array();
+  this.node = document.createElement("div");
+  this.node.id = this.anc+"_"+this.name;
+  this.node.className="headersrv";
+  this.node.innerHTML = "<b> Service: "+this.name+"</b>";
+  this.editbtn = document.createElement("button");
+  this.editbtn.id = "BTN_"+this.node.id;
+  this.editbtn.className="edit";
+  this.editbtn.innerHTML = "Add";
+  this.clickcall = 'doEdit("'+dp[0]+'","'+dp[1]+'","'+this.name+'")';
+  this.editbtn.setAttribute("onclick",this.clickcall);
+  this.clearbtn = document.createElement("button");
+  this.clearbtn.id = "CBTN_"+this.node.id;
+  this.clearbtn.className="edit";
+  this.clearbtn.innerHTML = "ClrEN";
+  this.clearcall = 'clearEnable("'+dp[0]+'","'+dp[1]+'","'+this.name+'",true)';
+  this.destroycall = 'doClear("'+dp[0]+'","'+dp[1]+'","'+this.name+'")';
+  this.clearbtn.setAttribute("onclick",this.clearcall);
+  this.node.appendChild(this.editbtn);
+  this.node.appendChild(this.clearbtn);
+  this.devices = document.createElement("div");
+  this.devices.name="devices";
+  this.node.appendChild(this.devices);
+  this.devices.className="header";
+  document.getElementById(this.anc).appendChild(this.node);
+  this.update(dp, desc);
+}
+
+function expandNames(name) {
+   var j = 0;
+   var names = Array();
+   while(j<name.length && name[j] !='(') j++;
+   if(j==name.length) {
+	names.push(name);
+	return names;
+   }
+   var prefix = name.substr(0,j);
+   var bg=j+1;
+   var ebg;
+   while(j<name.length && name[j]!='-') j++
+   ebg = j;
+   var first = parseInt(name.substr(bg,ebg-bg));
+   bg = j+1;
+   while(j<name.length && name[j]!=')') j++
+   ebg = j;
+   var last = parseInt(name.substr(bg,ebg-bg));
+   for(var j=first; j<=last; j++) names.push(prefix+j);
+   return names;
+}
+
+function HatGpioService(dp, desc) {
+  this.update = function(dp, desc) {
+    for(var i=0; i<desc.length; i++)
+	if((desc[i].type == "booleanin"||desc[i].type == "analogin") && this.items[desc[i].name] == undefined)
+	      this.items[desc[i].name] = new HatInput(dp, this.inputs,desc[i]);
+  	else if(desc[i].type == "booleanout" && this.items[desc[i].name] == undefined)
+		this.items[desc[i].name] = new HatButton(dp, this.outputs, desc[i]);
+	else if(desc[i].type == "BO") {
+	      var names = expandNames(desc[i].name);
+	      for(var j=0; j<names.length; j++) {
+		  desc[i].name = names[j];
+		  if(this.items[names[j]] == undefined) this.items[names[j]] = new HatButton(dp, this.outputs, desc[i]);
+	      }
+	}
+  }
+  this.statusUpdate = function(path,value) {
+     if(this.items[path[0]] == undefined) return false;
+     else return this.items[path[0]].statusUpdate(value);
+  }
+  this.enablepr = function(dom,subdom,srv,md) {
+     for(var key in this.items){
+        if(key != "unique") this.items[key].enablepr(dom,subdom,srv,md);
+     }
+     return true;
+  }
+  this.name = dp[2];
+  this.anc = dp[0]+"_"+dp[1];
+  this.items = Array();
+  this.node = document.createElement("div");
+  this.node.id = this.anc+"_"+this.name;
+  this.node.className="headersrv";
+  this.node.innerHTML = "<b> Service: "+this.name+"</b><br>";
+  this.inputs = document.createElement("div");
+  this.inputs.name="inputs";
+  this.node.appendChild(this.inputs);
+  this.inputs.className="header";
+  this.outputs = document.createElement("div");
+  this.outputs.name="outputs";
+  this.outputs.className="header";
+  this.node.appendChild(this.outputs);
+  document.getElementById(this.anc).appendChild(this.node);
+  this.update(dp, desc);
+}
+
+function HatDomain(dp, description) {
+   this.update = function(dp, description) {
+      var sub_name = dp[1];
+      if(this.subdomains[sub_name]==undefined)
+        this.subdomains[sub_name] = new HatSubdomain(dp, description);
+      else this.subdomains[sub_name].update(dp, description);
+   }
+   this.statusUpdate = function(path, value) {
+      var subdom = path.shift();
+      if(this.subdomains[subdom]==undefined) return false;
+      else return this.subdomains[subdom].statusUpdate(path, value);
+   }
+   this.enablepr = function(dom,subdom,srv,md) {
+     for(var key in this.subdomains){
+	  if(key != "unique") this.subdomains[key].enablepr(dom,subdom,srv,md);
+     }
+     return true;
+   }
+   this.name  = dp[0];
+   this.anc  = "/";
+   this.desc = description;
+   this.subdomains = Array();
+   this.domdiv = document.createElement("div");
+   this.domdiv.id=this.name;
+   this.domdiv.setAttribute("class","all");
+   this.domdiv.innerHTML = "<b> Domain: "+this.name+"</b>";
+   document.getElementById("alldomain").appendChild(this.domdiv);
+   this.update(dp,this.desc);
+}
+
+function onFirstMessage(message) {
+	if(message.destinationName.includes("description")) {
+		var desc;
+		try {
+   		   desc = JSON.parse(message.payloadString);
+		}
+		catch(err) {
+			console.log(err.message);
+		}
+		if(desc != undefined) {
+   		   var objid = Object.getOwnPropertyNames(desc)[0];
+		   var dpath = objid.split("/");
+   		   var name = dpath[0];
+		   var description = desc[objid];
+		   if(domains[name]==undefined) domains[name] = new HatDomain(dpath, description);
+		   else domains[name].update(dpath,description);
+		}
+	}
+	else {
+		var path = message.destinationName.split("/");
+		var desc;
+		try {
+	        	desc = JSON.parse(message.payloadString);
+		}
+		catch(err) {
+			console.log("ERROR: "+err.message);
+		}
+		var src = path.shift();
+		if(desc!=undefined && src == "from" && domains[path[0]]!=undefined) {
+			var req;
+			var val;
+			var dom = path.shift();
+			if(desc.status!=undefined) {
+				domains[dom].statusUpdate(path, desc.status);
+			}
+			if(desc.event!=undefined) {
+				domains[dom].statusUpdate(path, desc.event);
+			}
+		}
+	}
+}
+
+function cleanName(name) {
+  var cname = "";
+  for(i=0; i<name.length; i++) if(name[i]!="{"&&name[i]!="}"&&name[i]!=" ") cname+=name[i];
+  return cname;
+}
+
+// Create a client instance
+var d= new Date();
+var clientid = "prova"+d.getTime();
+var host = location.host.split(":");
+var mqtthost = host[0];
+var subscription = "from/#";
+
+
+var client = new Paho.MQTT.Client(mqtthost, 9001, clientid);
+// set callback handlers
+client.onConnectionLost = onConnectionLost;
+client.onMessageArrived = onFirstMessage;
+
+
+
+function onFirstConnect() {
+   client.subscribe(subscription);
+   var request = '{request:description.json}';
+   var message = new Paho.MQTT.Message(request);
+   message.destinationName = "to/all";
+   client.send(message);
+}
+
+// connect the client
+client.connect({onSuccess:onFirstConnect});
+
+
+</script>
+
+
+</head>
+<body>
+<div id="alldomain" class="external">
+</div>
+</body>
+</html5>
